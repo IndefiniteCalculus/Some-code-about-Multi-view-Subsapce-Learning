@@ -4,12 +4,6 @@ I am working on a graduation project about Multi-view learning recently. Here ar
 # requirement
 python 3.7+
 
-python packages: 
+package list: 
 
-numpy 
-
-sklearn 
-
-scipy 
-
-pickle
+numpy, sklearn, scipy, pickle
