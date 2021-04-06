@@ -173,18 +173,22 @@ class MvCCDA():
             pass
         return map_matrices, common_comp
 
-    def test(self,data, labels, data_param):
-        # testing method aim to find each mapped data vectors nearest vector (use Eucilid distance)
-        # if the nearest vector and selected vector shared with same label, we think the map of selected vector is a success
-        # if not, we think the mapping of this vector is a failure
+    def test(self, mapped_data, labels, common_comp):
+        # testing method aim to find each mapped data vectors nearest vector (use Eucilid distance). If the nearest
+        # vector and selected vector shared with same label, the vector was mapped to a proper manifold.
         from sklearn.neighbors import KNeighborsClassifier
+        mapped_data = []
+        for vi in range(self.num_view):
+            mapped_vi = np.dot(test_data[vi], map_matrixes[vi].T)
+            mapped_data.append(mapped_vi)
+
         acc_list = []
         for vi in range(self.num_view):
             neigh = KNeighborsClassifier(n_neighbors=3)
-            neigh.fit(data[vi], labels[vi].reshape(-1, 1))
+            neigh.fit(mapped_data[vi], labels[vi].reshape(-1, 1))
             for vj in range(self.num_view):
                 if vi != vj:
-                    pred = neigh.predict(data[vj])
+                    pred = neigh.predict(mapped_data[vj])
                     label = labels[vj]
                     t = pred - label
                     count = 0
@@ -268,10 +272,6 @@ class MvCCDA():
         # obtain number of view the dataset have
         return len(data_set)
 
-
-# hyperparameter setting
-
-
 if __name__ == "__main__":
     train_data, test_data, labels = dataloader.load_data("matlabpca")
 
@@ -286,11 +286,8 @@ if __name__ == "__main__":
     map_matrixes, common_comp = model.train(train_data, common_comp, map_matrixes)
     pass
     # map_matrixes, common_comp = train(train_data, map_matrixes, common_comp, onehots, hotkernel_mat, train_data_param, hyperparameters)
-    # # project test data to subspace
-    # mapped_data = []
-    # for vi in range(test_self.num_view):
-    #     mapped_vi = np.dot(test_data[vi], map_matrixes[vi].T)
-    #     mapped_data.append(mapped_vi)
+    # project test data to subspace
+
     # 
     # mapped_ave_acc = test(mapped_data, labels.get("test"), test_data_param)
     # unmapped_ave_acc = test(test_data, labels.get("test"), test_data_param)
