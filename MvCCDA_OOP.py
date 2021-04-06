@@ -173,20 +173,25 @@ class MvCCDA():
             pass
         return map_matrices, common_comp
 
-    def test(self, mapped_data, labels, common_comp):
+    def test(self, test_data, labels, map_matrices):
         # testing method aim to find each mapped data vectors nearest vector (use Eucilid distance). If the nearest
-        # vector and selected vector shared with same label, the vector was mapped to a proper manifold.
+        # vector and selected vector shared with same label, the selected vector was mapped to a proper manifold.
+
+        # map data to manifold described by mapping matrices
         from sklearn.neighbors import KNeighborsClassifier
+        num_view = self._obtain_numview(test_data)
+        num_sample = test_data[0].shape[0]
         mapped_data = []
-        for vi in range(self.num_view):
-            mapped_vi = np.dot(test_data[vi], map_matrixes[vi].T)
+        for vi in range(num_view):
+            mapped_vi = np.dot(test_data[vi], map_matrices[vi].T)
             mapped_data.append(mapped_vi)
 
+        # count the accuracy of data in the manifold
         acc_list = []
-        for vi in range(self.num_view):
+        for vi in range(num_view):
             neigh = KNeighborsClassifier(n_neighbors=3)
             neigh.fit(mapped_data[vi], labels[vi].reshape(-1, 1))
-            for vj in range(self.num_view):
+            for vj in range(num_view):
                 if vi != vj:
                     pred = neigh.predict(mapped_data[vj])
                     label = labels[vj]
@@ -195,7 +200,7 @@ class MvCCDA():
                     for ele_idx in range(max(t.shape)):
                         if t[0, ele_idx] == 0:
                             count += 1
-                    acc = count / self.num_sample
+                    acc = count / num_sample
                     acc_list.append(acc)
         acc_ave = sum(acc_list) / len(acc_list) * 100
         return acc_ave
@@ -287,11 +292,8 @@ if __name__ == "__main__":
     pass
     # map_matrixes, common_comp = train(train_data, map_matrixes, common_comp, onehots, hotkernel_mat, train_data_param, hyperparameters)
     # project test data to subspace
-
-    # 
-    # mapped_ave_acc = test(mapped_data, labels.get("test"), test_data_param)
-    # unmapped_ave_acc = test(test_data, labels.get("test"), test_data_param)
-    # 
+    mapped_ave_acc = model.test(test_data, labels.get("test"), map_matrixes)
+    #
     # print("percentage of how many vector and it's nearest vector shared with same label among unmapped dataset: \n"+str(unmapped_ave_acc)+"%")
     # print("percentage of how many vector and it's nearest vector shared with same label among mapped dataset: \n" + str(mapped_ave_acc)+"%")
     pass
