@@ -202,7 +202,7 @@ def train(train_data, map_matrixes, common_comp, onehots, hotkernel_mat, data_pa
     return map_matrixes, common_comp
 
 
-def test(data, labels, data_param):
+def test(data:list, labels, data_param):
     # the way of testing is find each mapped data vectors nearest vector (use Eucilid distance)
     # if the nearest vector and selected vector shared with same label, we think the map of selected vector is a success
     # if not, we think the mapping of this vector is a failure
