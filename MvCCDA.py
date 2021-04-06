@@ -270,6 +270,9 @@ if __name__ == "__main__":
     mapped_ave_acc = test(mapped_data, labels.get("test"), test_data_param)
     unmapped_ave_acc = test(test_data, labels.get("test"), test_data_param)
 
-    print("the acc of unmapped: "+str(unmapped_ave_acc))
-    print("the acc of mapped data: " + str(mapped_ave_acc))
+    print(
+        "percentage of how many vector and it's nearest vector shared with same label among unmapped dataset: \n" + str(
+            unmapped_ave_acc) + "%")
+    print("percentage of how many vector and it's nearest vector shared with same label among mapped dataset: \n" + str(
+        mapped_ave_acc) + "%")
     pass
