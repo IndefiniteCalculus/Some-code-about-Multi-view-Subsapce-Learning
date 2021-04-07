@@ -13,7 +13,7 @@ class MvCCDA():
         self.lambda3 = lambda3
         self.sigma = sigma
         self.subspace_dim = subspace_dim
-        self.lambda4 = lambda3
+        self.lambda4 = lambda4
         self.t = t  # the coefficient of Sb-tSw
         self.algorithm = algorithm
 
@@ -107,7 +107,7 @@ class MvCCDA():
 
                     if self.algorithm == "LPDP":
                         # the LPDP require an extra adjacency matrix to describe Sw and Sb(replace as St - Sw)
-                        sum_j_Mi = np.sum((M[i,:]))  # * 2
+                        sum_j_Mi = np.sum((M[i,:])) * 2
 
                         # the assemble of 'a' should be
                         a = self.num_view * self.lambda2 \
@@ -120,9 +120,12 @@ class MvCCDA():
                         temp_indices = temp_indices.tolist()
                         temp_indices.pop(i)
                         sum_comps_without_compi = common_comp[temp_indices].sum(axis = 0)
+                        # b = self.num_view * self.lambda2 * onehots[0][i, :] \
+                        #     + self.num_view * self.lambda3 * weighted_comp_i \
+                        #     - self.lambda4 * sum_comps_without_compi * 2
                         b = self.num_view * self.lambda2 * onehots[0][i, :] \
                             + self.num_view * self.lambda3 * weighted_comp_i \
-                            - self.lambda4 * sum_comps_without_compi # * 2
+                            - self.lambda4 * sum_comps_without_compi * 2
                         for v in range(self.num_view):
                             b = b + Q[v] * np.dot(map_matrices[v], train_data[v][i, :])
                         updated_common_comp_i = np.linalg.inv(np.eye(self.subspace_dim) * a).dot(b.reshape(-1, 1))
@@ -317,7 +320,7 @@ if __name__ == "__main__":
     for m_idx in range(len(map_matrixes)):
         map_matrixes[m_idx] = map_matrixes[m_idx].T
 
-    model = MvCCDA(algorithm="LPDP", t = 1)
+    model = MvCCDA(algorithm="LPDP", t = 0, lambda4=1e-4)
     train_labels = labels.get("train")
     map_matrixes, common_comp = model.train(train_data, train_labels, common_comp, map_matrixes)
 

@@ -59,7 +59,7 @@ def obtain_numclass(label_set):
         temp_min, temp_max = np.min(label_set.get(data_type)), \
                              np.max(label_set.get(data_type))
         if temp_max > max_l:
-            max_l = temp_max
+            max_l= temp_max
         if temp_min < min_l:
             min_l = temp_min
     num_classes = max_l - min_l + 1
