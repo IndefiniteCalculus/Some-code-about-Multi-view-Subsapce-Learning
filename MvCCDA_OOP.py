@@ -5,7 +5,7 @@ from scipy.linalg import eigh
 
 class MvCCDA():
     def __init__(self, alpha=2.3849, lambda1=0.6, lambda2=0.002, lambda3=0.0005,
-                 sigma=2000, subspace_dim=45, algorithm="LPP", lambda4=None, t=None):
+                 sigma=2000, subspace_dim=45, algorithm="LPP", lambda4=None, t=1):
         # initial parameters of hyper setting
         self.alpha = alpha
         self.lambda1 = lambda1
@@ -13,7 +13,7 @@ class MvCCDA():
         self.lambda3 = lambda3
         self.sigma = sigma
         self.subspace_dim = subspace_dim
-        self.lambda4 = lambda4
+        self.lambda4 = lambda3
         self.t = t  # the coefficient of Sb-tSw
         self.algorithm = algorithm
 
@@ -22,7 +22,6 @@ class MvCCDA():
         # TODO: add a method to recompile labels when input labels into train method. Make sure the compiled labels
         #  only contain continuous integers started with 1 (get onehot method can handle such start)
 
-
         # initial parameters about input data
         self.num_sample = self._obtain_numsample(train_data[0])
         self.num_dim = self._obtain_numdim(train_data[0])
@@ -30,7 +29,18 @@ class MvCCDA():
         self.num_class, self.max_class, self.min_class = self._obtain_numclass(train_labels)
         # initial matrices which will be used in the update procedures
         onehots = self._num2onehot(train_labels)
+
         hotkernel_mat = self._get_hotkernel_mat(train_labels, train_data)
+
+        eks = onehots[0].T
+        adj_mat_sum = np.zeros((self.num_sample, self.num_sample))
+        for c_idx in range(self.num_class):
+            ek = eks[c_idx, :]
+            adj_mat_k = np.outer(ek, ek)
+            adj_mat_sum = adj_mat_sum + adj_mat_k
+        I = np.eye(self.num_sample)
+        e = np.ones(self.num_sample)
+        M = (I - np.outer(e, e)) / self.num_sample - (1 + self.t) * (I - adj_mat_sum)
 
         if rand_seed is not None:
             np.random.seed(rand_seed)
@@ -80,6 +90,7 @@ class MvCCDA():
                         Q.append(1 / (np.dot(r[v], r[v].T) + self.alpha ** 2))
                     sum_Q = sum(Q)
 
+                    updated_common_comp_i = None
                     # assemble the two part of the objective function a and b(object = a^-1 * b)
                     if self.algorithm == "LPP":
                         # the assemble of 'a' should be
@@ -96,15 +107,22 @@ class MvCCDA():
 
                     if self.algorithm == "LPDP":
                         # the LPDP require an extra adjacency matrix to describe Sw and Sb(replace as St - Sw)
+                        sum_j_Mi = np.sum((M[i,:]))  # * 2
 
                         # the assemble of 'a' should be
                         a = self.num_view * self.lambda2 \
                             + self.num_view * self.lambda3 * weight_map_i \
+                            - sum_j_Mi * self.lambda4 \
                             + sum_Q
 
                         # the assemble of 'b' should be
+                        temp_indices = np.arange(self.num_sample)
+                        temp_indices = temp_indices.tolist()
+                        temp_indices.pop(i)
+                        sum_comps_without_compi = common_comp[temp_indices].sum(axis = 0)
                         b = self.num_view * self.lambda2 * onehots[0][i, :] \
-                            + self.num_view * self.lambda3 * weighted_comp_i
+                            + self.num_view * self.lambda3 * weighted_comp_i \
+                            - self.lambda4 * sum_comps_without_compi # * 2
                         for v in range(self.num_view):
                             b = b + Q[v] * np.dot(map_matrices[v], train_data[v][i, :])
                         updated_common_comp_i = np.linalg.inv(np.eye(self.subspace_dim) * a).dot(b.reshape(-1, 1))
@@ -206,7 +224,7 @@ class MvCCDA():
         # count the accuracy of data in the manifold
         acc_list = []
         for vi in range(num_view):
-            neigh = KNeighborsClassifier(n_neighbors=3)
+            neigh = KNeighborsClassifier(n_neighbors=5)
             neigh.fit(mapped_data[vi], labels[vi].reshape(-1, 1))
             for vj in range(num_view):
                 if vi != vj:
@@ -299,11 +317,10 @@ if __name__ == "__main__":
     for m_idx in range(len(map_matrixes)):
         map_matrixes[m_idx] = map_matrixes[m_idx].T
 
-    model = MvCCDA()
+    model = MvCCDA(algorithm="LPDP", t = 1)
     train_labels = labels.get("train")
     map_matrixes, common_comp = model.train(train_data, train_labels, common_comp, map_matrixes)
-    pass
-    # map_matrixes, common_comp = train(train_data, map_matrixes, common_comp, onehots, hotkernel_mat, train_data_param, hyperparameters)
+
     # project test data to subspace
     mapped_ave_acc = model.test(test_data, labels.get("test"), map_matrixes)
     #
