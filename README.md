@@ -6,4 +6,4 @@ python 3.7+
 
 package list: 
 
-numpy, sklearn, scipy, pickle
+numpy, sklearn, scipy, pickle, opencv-python
