@@ -26,9 +26,9 @@ def load_data(data_name):
             label_set = pickle.load(label_f)
 
     elif data_name == "ORL":
-        # TODO: after transform_ORL complete, format data to meet the requirement of model
         root_dir = "E:\\Works\\数据集\\ORL\\The ORL Database of Faces" # edit root_dir as the path of ORL database
-        transform_ORL.do_transform(root_dir)
+        data, label = transform_ORL.do_transform(root_dir)
+        return data, label
 
     else:
         return None, None, None
