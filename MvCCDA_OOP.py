@@ -22,6 +22,7 @@ class MvCCDA():
         # TODO: add a method to recompile labels when input labels into train method. Make sure the compiled labels
         #  only contain continuous integers started with 1 (get onehot method can handle such start)
 
+        # TODO: after finished label recompile method,
         # initial parameters about input data
         self.num_sample = self._obtain_numsample(train_data[0])
         self.num_dim = self._obtain_numdim(train_data[0])
