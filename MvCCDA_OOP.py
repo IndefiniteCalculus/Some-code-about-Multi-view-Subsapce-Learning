@@ -64,17 +64,36 @@ class MvCCDA():
         else:
             map_matrices = []
             for i in range(self.num_view):
-                map_matrices.append(np.random.random((self.num_dim, self.subspace_dim)))
+                map_matrices.append(np.random.random((self.subspace_dim, self.num_dim)))
 
         # normally update common component and map matrices
         if training_mode == "normal":
-            return self.optimization(train_data, common_comp, map_matrices)
+            return self._optimization(train_data, common_comp, map_matrices)
         if training_mode == "cross_validation":
-            # select
-            each_n_sample = self.num_sample / 10
+            # split samples into 10 separated parts
+            each_n_sample = self.num_sample // 10
+            unfull_num = self.num_sample % 10
+
+            # generate indices of samples
+            slice_indices = []
+            for i in range(10):
+                slice_indices.append([i * each_n_sample, (i+1) * each_n_sample])
+
+            # balance the proportion of split sample sets
+            if unfull_num > 5:
+                used_unfull_num = 0
+                for indices in slice_indices:
+                    if used_unfull_num < unfull_num:
+                        if indices[0] != 0:
+                            indices[0] = indices[0] + 1 + used_unfull_num
+                        indices[1] = indices[1] + 1 + used_unfull_num
+                        used_unfull_num += 1
+            else:
+                slice_indices[-1][1] += unfull_num
 
 
-    def optimization(self, data, common_comp, map_matrices):
+
+    def _optimization(self, data, common_comp, map_matrices):
         # iterative update reduced_data and map_matrix
         all_coveraged = None
         iteration = 0
@@ -333,7 +352,7 @@ if __name__ == "__main__":
 
     model = MvCCDA(algorithm="LPP", t = 1, lambda3=5e-4 ,lambda4=1e-4)
     train_labels = labels.get("train")
-    map_matrices, common_comp = model.train(train_data, train_labels, common_comp, map_matrices)
+    map_matrices, common_comp = model.train(train_data, train_labels, rand_seed=0)
 
     # project test data to subspace
     mapped_ave_acc = model.test(test_data, labels.get("test"), map_matrices)
