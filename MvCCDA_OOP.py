@@ -17,10 +17,12 @@ class MvCCDA():
         self.t = t  # the coefficient of Sb-tSw
         self.algorithm = algorithm
 
+
     def train(self, train_data, train_labels,
-              common_comp: np.array = None, map_matrices: list = None, rand_seed=None):
+              common_comp: np.array = None, map_matrices: list = None, rand_seed=None,
+              training_mode:str = "normal", valid_rate = 1, using_view = "all"):
         # TODO: design a independent cross-validation method(or refactor train, isolate the part related to num_class
-        #  values )
+        #  values, and optimized part as a independent method)
 
         # initial parameters about input data
         self.num_sample = self._obtain_numsample(train_data[0])
@@ -28,11 +30,11 @@ class MvCCDA():
         self.num_view = self._obtain_numview(train_data)
         self.num_class, self.max_class, self.min_class = self._obtain_numclass(train_labels)
         # initial matrices which will be used in the update procedures
-        onehots = self._num2onehot(train_labels)
+        self.onehots = self._num2onehot(train_labels)
 
-        hotkernel_mat = self._get_hotkernel_mat(train_labels, train_data)
+        self.hotkernel_mat = self._get_hotkernel_mat(train_labels, train_data)
 
-        eks = onehots[0].T
+        eks = self.onehots[0].T
         adj_mat_sum = np.zeros((self.num_sample, self.num_sample))
         for c_idx in range(self.num_class):
             ek = eks[c_idx, :]
@@ -40,8 +42,9 @@ class MvCCDA():
             adj_mat_sum = adj_mat_sum + adj_mat_k
         I = np.eye(self.num_sample)
         e = np.ones(self.num_sample)
-        M = (I - np.outer(e, e)) / self.num_sample - (1 + self.t) * (I - adj_mat_sum)
+        self.M = (I - np.outer(e, e)) / self.num_sample - (1 + self.t) * (I - adj_mat_sum)
 
+        # initial common comp and map matrices
         if rand_seed is not None:
             np.random.seed(rand_seed)
 
@@ -62,16 +65,24 @@ class MvCCDA():
             map_matrices = []
             for i in range(self.num_view):
                 map_matrices.append(np.random.random((self.num_dim, self.subspace_dim)))
-        pass
 
+        # normally update common component and map matrices
+        if training_mode == "normal":
+            return self.optimization(train_data, common_comp, map_matrices)
+        if training_mode == "cross_validation":
+            # select
+            each_n_sample = self.num_sample / 10
+
+
+    def optimization(self, data, common_comp, map_matrices):
         # iterative update reduced_data and map_matrix
         all_coveraged = None
         iteration = 0
         while True:
             # update all common component of each sample vector
             for i in range(self.num_sample):
-                weight_map_i = np.sum(hotkernel_mat[i, :])
-                weighted_comp_i = np.dot(hotkernel_mat[i, :].reshape(1, -1), common_comp)
+                weight_map_i = np.sum(self.hotkernel_mat[i, :])
+                weighted_comp_i = np.dot(self.hotkernel_mat[i, :].reshape(1, -1), common_comp)
 
                 # optimize the component based on map matrix
                 optimized_count = 0
@@ -82,7 +93,7 @@ class MvCCDA():
                     Q = []
                     # calculate the r of objective function
                     for v_id in range(self.num_view):
-                        mapped_data = np.dot(map_matrices[v_id], train_data[v_id][i, :].T)
+                        mapped_data = np.dot(map_matrices[v_id], data[v_id][i, :].T)
                         r.append(common_comp[i, :] - mapped_data)
 
                     # calculate the weight function Q in the objective function
@@ -99,15 +110,15 @@ class MvCCDA():
                             + sum_Q
 
                         # the assemble of 'b' should be
-                        b = self.num_view * self.lambda2 * onehots[0][i, :] \
+                        b = self.num_view * self.lambda2 * self.onehots[0][i, :] \
                             + self.num_view * self.lambda3 * weighted_comp_i
                         for v in range(self.num_view):
-                            b = b + Q[v] * np.dot(map_matrices[v], train_data[v][i, :])
+                            b = b + Q[v] * np.dot(map_matrices[v], data[v][i, :])
                         updated_common_comp_i = np.linalg.inv(np.eye(self.subspace_dim) * a).dot(b.reshape(-1, 1))
 
                     if self.algorithm == "LPDP":
                         # the LPDP require an extra adjacency matrix to describe Sw and Sb(replace as St - Sw)
-                        sum_j_Mi = np.sum((M[i,:])) * 2
+                        sum_j_Mi = np.sum((self.M[i,:])) * 2
 
                         # the assemble of 'a' should be
                         a = self.num_view * self.lambda2 \
@@ -123,11 +134,11 @@ class MvCCDA():
                         # b = self.num_view * self.lambda2 * onehots[0][i, :] \
                         #     + self.num_view * self.lambda3 * weighted_comp_i \
                         #     - self.lambda4 * sum_comps_without_compi * 2
-                        b = self.num_view * self.lambda2 * onehots[0][i, :] \
+                        b = self.num_view * self.lambda2 * self.onehots[0][i, :] \
                             + self.num_view * self.lambda3 * weighted_comp_i \
                             - self.lambda4 * sum_comps_without_compi * 2
                         for v in range(self.num_view):
-                            b = b + Q[v] * np.dot(map_matrices[v], train_data[v][i, :])
+                            b = b + Q[v] * np.dot(map_matrices[v], data[v][i, :])
                         updated_common_comp_i = np.linalg.inv(np.eye(self.subspace_dim) * a).dot(b.reshape(-1, 1))
 
                     # estimate loss of this component and break the loop if coverage
@@ -158,11 +169,11 @@ class MvCCDA():
                     r = []
                     # calculate the G of objective function
                     for sample_id in range(self.num_sample):
-                        mapped_data = np.dot(map_mat_v, train_data[v][sample_id, :].T)
+                        mapped_data = np.dot(map_mat_v, data[v][sample_id, :].T)
                         r_i = common_comp[sample_id, :] - mapped_data
                         r.append(r_i)
                         G.append(1 / (np.dot(r_i, r_i.T) + self.alpha ** 2))
-                    data_X = train_data[v]
+                    data_X = data[v]
                     G = np.array(G).reshape(-1, 1)
                     XG = np.dot(G * np.eye(self.num_sample),
                                 data_X)
@@ -316,16 +327,16 @@ if __name__ == "__main__":
     # initialization of parameters to be learned, size of row data should be (num_sample, num_dim)
     param = dataloader.load_param()
     common_comp = param.get("Z").T
-    map_matrixes = param.get("P")
-    for m_idx in range(len(map_matrixes)):
-        map_matrixes[m_idx] = map_matrixes[m_idx].T
+    map_matrices = param.get("P")
+    for m_idx in range(len(map_matrices)):
+        map_matrices[m_idx] = map_matrices[m_idx].T
 
-    model = MvCCDA(algorithm="LPDP", t = 1, lambda3=5e-4 ,lambda4=1e-4)
+    model = MvCCDA(algorithm="LPP", t = 1, lambda3=5e-4 ,lambda4=1e-4)
     train_labels = labels.get("train")
-    map_matrixes, common_comp = model.train(train_data, train_labels, common_comp, map_matrixes)
+    map_matrices, common_comp = model.train(train_data, train_labels, common_comp, map_matrices)
 
     # project test data to subspace
-    mapped_ave_acc = model.test(test_data, labels.get("test"), map_matrixes)
+    mapped_ave_acc = model.test(test_data, labels.get("test"), map_matrices)
     #
     # print("percentage of how many vector and it's nearest vector shared with same label among unmapped dataset: \n"+str(unmapped_ave_acc)+"%")
     # print("percentage of how many vector and it's nearest vector shared with same label among mapped dataset: \n" + str(mapped_ave_acc)+"%")

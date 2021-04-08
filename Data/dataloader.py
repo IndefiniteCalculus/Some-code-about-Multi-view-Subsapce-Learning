@@ -1,6 +1,6 @@
 import pickle
 import os
-import transform_ORL
+from Data import transform_ORL
 def load_data(data_name):
 
     if data_name == "matlabtest":
