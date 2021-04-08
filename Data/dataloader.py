@@ -30,6 +30,13 @@ def load_data(data_name):
         data, label = transform_ORL.do_transform(root_dir)
         return data, label
 
+    elif data_name == "pie":
+        root_dir = r"E:\\Works\\python_work\\Some code about Multi-view Subsapce Learning\\Data"
+        with open(root_dir + "\\row_data.pickle", "rb") as data_f, open(root_dir + "\\labels.pickle", "rb") as label_f:
+            row_data = pickle.load(data_f)
+            train_set = row_data.get("train")
+            test_set = row_data.get("test")
+            label_set = pickle.load(label_f)
     else:
         return None, None, None
 
