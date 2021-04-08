@@ -19,12 +19,8 @@ class MvCCDA():
 
     def train(self, train_data, train_labels,
               common_comp: np.array = None, map_matrices: list = None, rand_seed=None):
-        # TODO: add a dataloader to load in and reformat data into matrices in list form
-
-        # TODO: add a method to recompile labels when input labels into train method. Make sure the compiled labels
-        #  only contain continuous integers started with 1 (get onehot method can handle such start)
-
-        # TODO: after finishing label recompile method, design a cross validation frame work using test method.
+        # TODO: design a independent cross-validation method(or refactor train, isolate the part related to num_class
+        #  values )
 
         # initial parameters about input data
         self.num_sample = self._obtain_numsample(train_data[0])

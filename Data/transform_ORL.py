@@ -21,11 +21,12 @@ def do_transform(root_dir):
             # and extract file name as label by the way
             for view_labels in labels:
                 view_labels.append(int(file_name[1:]))
+
     # transform label lists to numpy arrays
     for idx in range(len(labels)):
         labels[idx] = np.array(labels[idx])
 
-    # flatten mat into vectors
+    # flatten matrices into vectors
     n_sample = len(im_list[0])
     data = []
     for view in range(len(im_list)):
