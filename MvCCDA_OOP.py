@@ -257,7 +257,7 @@ class MvCCDA():
         # count the accuracy of data in the manifold
         acc_list = []
         for vi in range(num_view):
-            neigh = KNeighborsClassifier(n_neighbors=5)
+            neigh = KNeighborsClassifier(n_neighbors=7)
             neigh.fit(mapped_data[vi], labels[vi].reshape(-1, 1))
             for vj in range(num_view):
                 if vi != vj:
@@ -342,7 +342,11 @@ class MvCCDA():
 
 if __name__ == "__main__":
     train_data, test_data, labels = dataloader.load_data("matlabpca")
-
+    # TODO: add a preprocessing PCA method and test on matlabrow dataset
+    pca_dim = 80
+    # from Preprocessing import MvPCA
+    # train_data = MvPCA.MvPCA(train_data, pca_dim)
+    # test_data = MvPCA.MvPCA(test_data, pca_dim)
     # initialization of parameters to be learned, size of row data should be (num_sample, num_dim)
     param = dataloader.load_param()
     common_comp = param.get("Z").T
@@ -350,7 +354,7 @@ if __name__ == "__main__":
     for m_idx in range(len(map_matrices)):
         map_matrices[m_idx] = map_matrices[m_idx].T
 
-    model = MvCCDA(algorithm="LPP", t = 1, lambda3=5e-4 ,lambda4=1e-4)
+    model = MvCCDA(algorithm="LPP", t = 1, lambda3=5e-4 ,lambda4=5e-4)
     train_labels = labels.get("train")
     map_matrices, common_comp = model.train(train_data, train_labels, rand_seed=0)
 

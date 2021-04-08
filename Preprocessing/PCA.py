@@ -12,10 +12,11 @@ def PCA(data, reducted_dim, mode="standard"):
         eig_idx = np.argsort(abs(eig_val))[::-1]
         eig_val = eig_val[eig_idx]
         eig_vec = eig_vec[:,eig_idx]
-        return eig_val, eig_vec
+        # return eig_val, eig_vec
         # projection
         # the data should be organized in form like: (nSamples, dim)
         coordinates = eig_vec[:,:reducted_dim]
+        return coordinates
     elif mode == "SVD":
         # svd decomposition
         U, diag_elements, V = np.linalg.svd(data / np.sqrt(data.shape[0] - 1))
@@ -25,7 +26,3 @@ def PCA(data, reducted_dim, mode="standard"):
         eig_vec = U[:,eig_idx]
         return eig_val, eig_vec
         pass
-
-    time1 = t2 - t1
-    time2 = t3 - t1
-    pass
