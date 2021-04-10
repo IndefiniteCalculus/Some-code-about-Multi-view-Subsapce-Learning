@@ -21,8 +21,6 @@ class MvCCDA():
     def train(self, train_data, train_labels,
               common_comp: np.array = None, map_matrices: list = None, rand_seed=None,
               training_mode:str = "normal", valid_rate = 1, using_view = "all"):
-        # TODO: design a independent cross-validation method(or refactor train, isolate the part related to num_class
-        #  values, and optimized part as a independent method)
 
         # initial parameters about input data
         self.num_sample = self._obtain_numsample(train_data[0])
@@ -244,6 +242,9 @@ class MvCCDA():
     def test(self, test_data, labels, map_matrices):
         # testing method aim to find each mapped data vectors nearest vector (use Eucilid distance). If the nearest
         # vector and selected vector shared with same label, the selected vector was mapped to a proper manifold.
+        # TODO: design a independent cross-validation method(or refactor train, isolate the part related to num_class
+        #  values, and optimized part as a independent method). The frame work need to be implement is：
+        #  1: random split 2:k-fold
 
         # map data to manifold described by mapping matrices
         from sklearn.neighbors import KNeighborsClassifier
@@ -257,7 +258,7 @@ class MvCCDA():
         # count the accuracy of data in the manifold
         acc_list = []
         for vi in range(num_view):
-            neigh = KNeighborsClassifier(n_neighbors=7)
+            neigh = KNeighborsClassifier(n_neighbors=1)
             neigh.fit(mapped_data[vi], labels[vi].reshape(-1, 1))
             for vj in range(num_view):
                 if vi != vj:
@@ -344,6 +345,7 @@ if __name__ == "__main__":
     train_data, test_data, labels = dataloader.load_data("matlabpca")
     # TODO: add a preprocessing PCA method and test on matlabrow dataset
     pca_dim = 80
+    # TODO: find out why sklearn PCA method get different PCA result from the result that matlab PCA generated
     # from Preprocessing import MvPCA
     # train_data = MvPCA.MvPCA(train_data, pca_dim)
     # test_data = MvPCA.MvPCA(test_data, pca_dim)
@@ -354,9 +356,9 @@ if __name__ == "__main__":
     for m_idx in range(len(map_matrices)):
         map_matrices[m_idx] = map_matrices[m_idx].T
 
-    model = MvCCDA(algorithm="LPP", t = 1, lambda3=5e-4 ,lambda4=5e-4)
+    model = MvCCDA(algorithm="LPP", t = 1, lambda3=5e-4 ,lambda4=0)
     train_labels = labels.get("train")
-    map_matrices, common_comp = model.train(train_data, train_labels, rand_seed=0)
+    map_matrices, common_comp = model.train(train_data, train_labels,common_comp,map_matrices, rand_seed=0)
 
     # project test data to subspace
     mapped_ave_acc = model.test(test_data, labels.get("test"), map_matrices)
