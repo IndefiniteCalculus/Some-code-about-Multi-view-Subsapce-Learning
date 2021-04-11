@@ -342,10 +342,12 @@ class MvCCDA():
 
 
 if __name__ == "__main__":
-    train_data, test_data, labels = dataloader.load_data("matlabpca")
+    train_data, test_data, labels = dataloader.load_data("matlabrow")
     # TODO: add a preprocessing PCA method and test on matlabrow dataset
     pca_dim = 80
-    # TODO: find out why sklearn PCA method get different PCA result from the result that matlab PCA generated
+    # the pca procedures of matlab is using mean removed data do the pca transformation, and the fit of W from each view
+    # is used to construct an only W_mean do the data dim reduction
+    # TODO: try implement multiview pca when has free time
     # from Preprocessing import MvPCA
     # train_data = MvPCA.MvPCA(train_data, pca_dim)
     # test_data = MvPCA.MvPCA(test_data, pca_dim)
