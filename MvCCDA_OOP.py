@@ -2,10 +2,11 @@ import numpy as np
 from Data import dataloader
 from scipy.linalg import eigh
 from Preprocessing import DataType_Transformation as pca_loader
+import rcca
 
 class MvCCDA():
     def __init__(self, alpha=2.3849, lambda1=0.6, lambda2=0.002, lambda3=0.0005,
-                 sigma=2000, subspace_dim=45, algorithm="LPP", lambda4=None, t=1):
+                 sigma=2000, subspace_dim=None, algorithm="LPP", lambda4=None, t=1):
         # initial parameters of hyper setting
         self.alpha = alpha
         self.lambda1 = lambda1
@@ -27,6 +28,8 @@ class MvCCDA():
         self.num_dim = self._obtain_numdim(train_data[0])
         self.num_view = self._obtain_numview(train_data)
         self.num_class, self.max_class, self.min_class = self._obtain_numclass(train_labels)
+        if self.subspace_dim is None:
+            self.subspace_dim = self.num_class
         # initial matrices which will be used in the update procedures
         self.onehots = self._num2onehot(train_labels)
 
@@ -239,7 +242,7 @@ class MvCCDA():
             pass
         return map_matrices, common_comp
 
-    def test(self, test_data, labels, map_matrices):
+    def test(self, test_data, labels, map_matrices, mode):
         # testing method aim to find each mapped data vectors nearest vector (use Eucilid distance). If the nearest
         # vector and selected vector shared with same label, the selected vector was mapped to a proper manifold.
         # TODO: design a independent cross-validation method(or refactor train, isolate the part related to num_class
@@ -261,16 +264,29 @@ class MvCCDA():
             neigh = KNeighborsClassifier(n_neighbors=1)
             neigh.fit(mapped_data[vi], labels[vi].reshape(-1, 1))
             for vj in range(num_view):
-                if vi != vj:
-                    pred = neigh.predict(mapped_data[vj])
-                    label = labels[vj]
-                    t = pred - label
-                    count = 0
-                    for ele_idx in range(max(t.shape)):
-                        if t[0, ele_idx] == 0:
-                            count += 1
-                    acc = count / num_sample
-                    acc_list.append(acc)
+                if mode == "pair_wise":
+                    if vi != vj:
+                        pred = neigh.predict(mapped_data[vj])
+                        label = labels[vj]
+                        t = pred - label
+                        count = 0
+                        for ele_idx in range(max(t.shape)):
+                            if t[0, ele_idx] == 0:
+                                count += 1
+                        acc = count / num_sample
+                        acc_list.append(acc)
+                if mode == "gallary_probe":
+                    if vi > vj:
+                        pred = neigh.predict(mapped_data[vj])
+                        label = labels[vj]
+                        t = pred - label
+                        count = 0
+                        for ele_idx in range(max(t.shape)):
+                            if t[0, ele_idx] == 0:
+                                count += 1
+                        acc = count / num_sample
+                        acc_list.append(acc)
+
         acc_ave = sum(acc_list) / len(acc_list) * 100
         return acc_ave
 
@@ -295,7 +311,7 @@ class MvCCDA():
         # obtain hot kernel matrix on the basis of similarity matrix and respective data labels
         for i in range(self.num_sample):
             for j in range(self.num_sample):
-                if label[0][0, i] != label[0][0, j]:  # only consider the similarity of data shared with same labels
+                if label[0][0, i] != label[0][0, j]:  # only consider the similarity between data shared with same labels
                     Sv[i, j] = 0
         return Sv
 
@@ -342,9 +358,12 @@ class MvCCDA():
 
 
 if __name__ == "__main__":
-    train_data, test_data, labels = dataloader.load_data("matlabrow")
+    # train_data, test_data, labels = dataloader.load_data("matlabrow")
+    pca_dim = 256
+    tr_MvPCA, va_MvPCA, te_MvPCA, tr_label, va_label, te_label = dataloader.load_data("pca_mnist-usps",pca_dim)
+
     # TODO: add a preprocessing PCA method and test on matlabrow dataset
-    pca_dim = 80
+
     # the pca procedures of matlab is using mean removed data do the pca transformation, and the fit of W from each view
     # is used to construct an only W_mean do the data dim reduction
     # TODO: try implement multiview pca when has free time
@@ -353,18 +372,19 @@ if __name__ == "__main__":
     # test_data = MvPCA.MvPCA(test_data, pca_dim)
     # initialization of parameters to be learned, size of row data should be (num_sample, num_dim)
 
+
     param = dataloader.load_param()
     common_comp = param.get("Z").T
     map_matrices = param.get("P")
     for m_idx in range(len(map_matrices)):
         map_matrices[m_idx] = map_matrices[m_idx].T
 
-    model = MvCCDA(algorithm="LPP", t = 1, lambda3=5e-4 ,lambda4=0)
-    train_labels = labels.get("train")
-    map_matrices, common_comp = model.train(train_data, train_labels,common_comp,map_matrices, rand_seed=0)
+    model = MvCCDA(algorithm="LPP", t = 1, lambda3=0 ,lambda4=0)
+    # train_labels = labels.get("train")
+    map_matrices, common_comp = model.train(tr_MvPCA, tr_label, rand_seed=0)
 
     # project test data to subspace
-    mapped_ave_acc = model.test(test_data, labels.get("test"), map_matrices)
+    mapped_ave_acc = model.test(te_MvPCA, te_label, map_matrices, mode = "pair_wise")
     #
     # print("percentage of how many vector and it's nearest vector shared with same label among unmapped dataset: \n"+str(unmapped_ave_acc)+"%")
     # print("percentage of how many vector and it's nearest vector shared with same label among mapped dataset: \n" + str(mapped_ave_acc)+"%")

@@ -4,27 +4,29 @@ import matlab.engine
 from Data import dataloader
 # TODO: complete data transform task, the module aim to save data to mat, start matlab engine load in data and run matlab file to reduce the dim of data
 # TODO: save data to mat
-def save_pydata2mat(data:list, swap_dir):
+def save_pydata2mat(data:list, swap_dir, pca_dim):
     count = 0
     data_dict = {}
     mat = None
-    # the data will be stack together in row by row
+    view_dims = []
+    # the data from each view will be stack together as (n_sample, view1_dim + view2_dim + ...)
     for view_data in data:
         if mat is None:
             mat = view_data
         else:
-            mat = np.concatenate((mat, view_data), axis=0)
+            mat = np.concatenate((mat, view_data), axis=1)
+        view_dims.append(view_data.shape[1])
+
     num_view = len(data)
-    data_dict={"data":mat, "num_view":num_view}
+    data_dict={"data":mat, "num_view":num_view, "dim_list":np.array(view_dims), "pca_dim":pca_dim}
     io.savemat(swap_dir + "\\temp.mat", data_dict)
 
-def load_pca(dataset_name):
-    # dataset_name = "pie"
-    train_data = dataloader.load_data(dataset_name)
+def load_pca(train_data, pca_dim):
     # 将数据保存为mat文件
-    save_pydata2mat(train_data, "E:\\Works\\数据集")
+    save_pydata2mat(train_data, "E:\\Works\\数据集", pca_dim)
     # 运行matlab代码对数据进行转换，覆写temp.mat
     engine = matlab.engine.start_matlab()
+    engine.cd('Preprocessing',nargout=0)
     engine.preprocess(nargout=0)
     # 从matlab存储的文件中读出数据矩阵
     pca_data = io.loadmat("E:\\Works\\数据集" + "\\temp.mat")
@@ -32,7 +34,7 @@ def load_pca(dataset_name):
     num_view = pca_data.shape[1]
     Mv_PCA = []
     for view_idx in range(num_view):
-        Mv_PCA.append(pca_data[0, view_idx])
+        Mv_PCA.append(pca_data[0, view_idx].T)
     return Mv_PCA
 
 if __name__ == "__main__":

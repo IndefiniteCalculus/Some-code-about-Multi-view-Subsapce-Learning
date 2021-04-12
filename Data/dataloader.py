@@ -1,8 +1,9 @@
 import pickle
 import os
 from Data import transform_ORL
-
-def load_data(data_name):
+from Data import transform_mnist_usps
+from Preprocessing import DataType_Transformation as pca
+def load_data(data_name, pca_dim = None):
 
     if data_name == "matlabtest":
         root_dir = os.getcwd() + "\\Data"
@@ -38,8 +39,22 @@ def load_data(data_name):
             train_set = row_data.get("train")
             test_set = row_data.get("test")
             label_set = pickle.load(label_f)
+
     elif data_name == "pca_mnist-usps":
-        tran
+        Mv_Data, labels = transform_mnist_usps.do_transform("E:\\Works\\数据集\\mnist-usps")
+        MvPCA = pca.load_pca(Mv_Data, pca_dim)
+        from Data import mnist_usps_split
+        tr_MvPCA, va_MvPCA, te_MvPCA, tr_labels, va_labels, te_labels\
+            = mnist_usps_split.do_split(MvPCA, labels)
+        return tr_MvPCA, va_MvPCA, te_MvPCA, tr_labels, va_labels, te_labels
+
+    elif data_name == "mnist-usps":
+        MvData, labels = transform_mnist_usps.do_transform("E:\\Works\\数据集\\mnist-usps")
+        from Data import mnist_usps_split
+        tr_MvData, va_MvData, te_MvData, tr_labels, va_labels, te_labels \
+            = mnist_usps_split.do_split(MvData, labels)
+        return tr_MvData, va_MvData, te_MvData, tr_labels, va_labels, te_labels
+
     else:
         return None, None, None
 
@@ -52,6 +67,6 @@ def load_param():
         return param
 
 if __name__ == "__main__":
-    train_set, test_set, label_set = load_data("ORL")
+    train_set, test_set, label_set = load_data("pca_mnist-usps")
 
     pass
