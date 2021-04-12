@@ -48,9 +48,10 @@ def do_transform(root_dir):
                 data = np.concatenate((data, data_mat),axis=0)
 
         Mv_Data.append(data)
+        label = np.array(label)
         labels.append(label)
     return Mv_Data, labels
 
 
 if __name__ == "__main__":
-    do_transform("E:\\Works\\数据集\\mnist-usps")
+    Mv_Data, labels = do_transform("E:\\Works\\数据集\\mnist-usps")
