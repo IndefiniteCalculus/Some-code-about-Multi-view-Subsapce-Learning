@@ -1,7 +1,7 @@
 import numpy as np
 from Data import dataloader
 from scipy.linalg import eigh
-
+from Preprocessing import DataType_Transformation as pca_loader
 
 class MvCCDA():
     def __init__(self, alpha=2.3849, lambda1=0.6, lambda2=0.002, lambda3=0.0005,
@@ -352,6 +352,7 @@ if __name__ == "__main__":
     # train_data = MvPCA.MvPCA(train_data, pca_dim)
     # test_data = MvPCA.MvPCA(test_data, pca_dim)
     # initialization of parameters to be learned, size of row data should be (num_sample, num_dim)
+
     param = dataloader.load_param()
     common_comp = param.get("Z").T
     map_matrices = param.get("P")

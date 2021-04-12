@@ -1,6 +1,7 @@
 import pickle
 import os
 from Data import transform_ORL
+
 def load_data(data_name):
 
     if data_name == "matlabtest":
@@ -37,6 +38,8 @@ def load_data(data_name):
             train_set = row_data.get("train")
             test_set = row_data.get("test")
             label_set = pickle.load(label_f)
+    elif data_name == "pca_mnist-usps":
+        tran
     else:
         return None, None, None
 

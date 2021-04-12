@@ -19,8 +19,8 @@ def save_pydata2mat(data:list, swap_dir):
     io.savemat(swap_dir + "\\temp.mat", data_dict)
 
 def load_pca(dataset_name):
-    dataset_name = "pie"
-    train_data, test_data, label = dataloader.load_data(dataset_name)
+    # dataset_name = "pie"
+    train_data = dataloader.load_data(dataset_name)
     # 将数据保存为mat文件
     save_pydata2mat(train_data, "E:\\Works\\数据集")
     # 运行matlab代码对数据进行转换，覆写temp.mat
