@@ -10,7 +10,15 @@ function preprocess()
     MvData = cell(1,num_view);
     shape = size(data);
     for i = 1:num_view
-        MvData{i} = data((i-1)*dims_list(i)+1 : i*dims_list(i), : );
+        if(i-1 < 1)
+            start_dim = 1;
+            end_dim = dims_list(1);
+        else
+            start_dim = sum(dims_list(1:i-1)) + 1;
+            end_dim = sum(dims_list(1:i));
+        end
+        range = [start_dim, end_dim];
+        MvData{i} = data(start_dim : end_dim, : );
     end
     %DATA = load([swap_dir,'temp.mat']);
     %data = DATA.data;

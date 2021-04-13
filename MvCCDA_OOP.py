@@ -1,6 +1,6 @@
 import numpy as np
 from Data import dataloader
-from scipy.linalg import eigh
+import scipy.io as io
 from Preprocessing import DataType_Transformation as pca_loader
 import rcca
 
@@ -193,19 +193,32 @@ class MvCCDA():
                         r_i = common_comp[sample_id, :] - mapped_data
                         r.append(r_i)
                         G.append(1 / (np.dot(r_i, r_i.T) + self.alpha ** 2))
-                    data_X = data[v]
+                    X = data[v]
                     G = np.array(G).reshape(-1, 1)
-                    XG = np.dot(G * np.eye(self.num_sample),
-                                data_X)
-                    XGX = np.dot(data_X.T, XG)
+                    # XG = np.dot(X.T, G * np.eye(self.num_sample)).T
+                    # XGX = np.dot(X.T, XG)
+                    XGX, XGZ = None, None
+                    for i in range(self.num_sample):
+                        xi_Gi = X[i, :] * G[i]
+                        xi = X[i, :]
+                        if XGX is None:
+                            XGX = np.outer(xi_Gi, xi)
+                        else:
+                            XGX = XGX + np.outer(xi_Gi, xi)
+                        if XGZ is None:
+                            XGZ = np.outer(xi_Gi, common_comp[i, :])
+                        else:
+                            XGZ = XGZ + np.outer(xi_Gi, common_comp[i, :])
+
                     # assume the structure of objective function should be like a^-1 * b,
                     # the assemble of 'a' should be
                     a = XGX + self.lambda1 * self.num_sample * np.eye(self.num_dim)
                     # the assemble of 'b' should be XGZ
                     # GZ = np.dot(G * np.eye(self.num_sample),
                     #             common_comp)
-                    b = np.dot(common_comp.T, XG)
-                    updated_map_mat_v = np.dot(np.linalg.inv(a), b.T).T
+                    # b = np.dot(common_comp.T, XG)
+                    b = XGZ
+                    updated_map_mat_v = np.dot(np.linalg.inv(a), b).T
                     # use Frobenius norm to estimate loss of mapping matrix
                     loss = updated_map_mat_v - map_mat_v
                     loss = loss * loss
@@ -358,33 +371,46 @@ class MvCCDA():
 
 
 if __name__ == "__main__":
-    # train_data, test_data, labels = dataloader.load_data("matlabrow")
-    pca_dim = 256
-    tr_MvPCA, va_MvPCA, te_MvPCA, tr_label, va_label, te_label = dataloader.load_data("pca_mnist-usps",pca_dim)
+    # tr_MvData, te_MvData, labels = dataloader.load_data("matlabpca")
+    # tr_label = labels.get("train")
+    # te_label = labels.get("test")
+    pca_dim = 80
+    # tr_MvData, va_MvData, te_MvData, tr_label, va_label, te_label = dataloader.load_data("pca_mnist-usps", pca_dim)
 
     # TODO: add a preprocessing PCA method and test on matlabrow dataset
 
     # the pca procedures of matlab is using mean removed data do the pca transformation, and the fit of W from each view
     # is used to construct an only W_mean do the data dim reduction
     # TODO: try implement multiview pca when has free time
-    # from Preprocessing import MvPCA
+    from Preprocessing import MvPCA
     # train_data = MvPCA.MvPCA(train_data, pca_dim)
     # test_data = MvPCA.MvPCA(test_data, pca_dim)
     # initialization of parameters to be learned, size of row data should be (num_sample, num_dim)
 
+    mnist_usps_mat = io.loadmat("E:\\Works\\数据集\\mnist-usps\\mnist_usps.mat")
+    tr_MvData, tr_label = mnist_usps_mat.get('Tr_data'), mnist_usps_mat.get('Tr_Labels')
+    te_MvData, te_label = mnist_usps_mat.get('Te_data'), mnist_usps_mat.get('Te_Labels')
+    tr_MvData, tr_label = pca_loader.cell2list(tr_MvData), pca_loader.cell2list(tr_label)
+    te_MvData, te_label = pca_loader.cell2list(te_MvData), pca_loader.cell2list(te_label)
+    tr_MvData = pca_loader.load_pca(tr_MvData, pca_dim)
+    te_MvData = pca_loader.load_pca(te_MvData, pca_dim)
 
-    param = dataloader.load_param()
-    common_comp = param.get("Z").T
-    map_matrices = param.get("P")
-    for m_idx in range(len(map_matrices)):
-        map_matrices[m_idx] = map_matrices[m_idx].T
+    param = io.loadmat("E:\\Works\\MatlabWork\\MvCCDA_mnist_usps\\param.mat")
+    common_comp = param.get('Z').T
+    map_matrices = param.get('P')
+    map_matrices = pca_loader.cell2list(map_matrices)
+    # param = dataloader.load_param()
+    # common_comp = param.get("Z").T
+    # map_matrices = param.get("P")
 
-    model = MvCCDA(algorithm="LPP", t = 1, lambda3=0 ,lambda4=0)
+
+
+    model = MvCCDA(algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-3, lambda4=0)
     # train_labels = labels.get("train")
-    map_matrices, common_comp = model.train(tr_MvPCA, tr_label, rand_seed=0)
+    map_matrices, common_comp = model.train(tr_MvData, tr_label, rand_seed=0)
 
     # project test data to subspace
-    mapped_ave_acc = model.test(te_MvPCA, te_label, map_matrices, mode = "pair_wise")
+    mapped_ave_acc = model.test(te_MvData, te_label, map_matrices, mode ="pair_wise")
     #
     # print("percentage of how many vector and it's nearest vector shared with same label among unmapped dataset: \n"+str(unmapped_ave_acc)+"%")
     # print("percentage of how many vector and it's nearest vector shared with same label among mapped dataset: \n" + str(mapped_ave_acc)+"%")

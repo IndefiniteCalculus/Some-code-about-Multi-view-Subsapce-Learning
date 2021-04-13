@@ -21,6 +21,12 @@ def save_pydata2mat(data:list, swap_dir, pca_dim):
     data_dict={"data":mat, "num_view":num_view, "dim_list":np.array(view_dims), "pca_dim":pca_dim}
     io.savemat(swap_dir + "\\temp.mat", data_dict)
 
+def cell2list(MvMat):
+    MvData = []
+    for v in range(MvMat.shape[1]):
+        MvData.append(MvMat[0, v].T)
+    return MvData
+
 def load_pca(train_data, pca_dim):
     # 将数据保存为mat文件
     save_pydata2mat(train_data, "E:\\Works\\数据集", pca_dim)

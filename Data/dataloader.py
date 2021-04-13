@@ -55,6 +55,13 @@ def load_data(data_name, pca_dim = None):
             = mnist_usps_split.do_split(MvData, labels)
         return tr_MvData, va_MvData, te_MvData, tr_labels, va_labels, te_labels
 
+    elif data_name == "resized_mnist-usps":
+        MvData, labels = transform_mnist_usps.do_transform("E:\\Works\\数据集\\mnist-usps", loadin_mode="resize")
+        from Data import mnist_usps_split
+        tr_MvData, va_MvData, te_MvData, tr_labels, va_labels, te_labels \
+            = mnist_usps_split.do_split(MvData, labels)
+        return tr_MvData, va_MvData, te_MvData, tr_labels, va_labels, te_labels
+
     else:
         return None, None, None
 
