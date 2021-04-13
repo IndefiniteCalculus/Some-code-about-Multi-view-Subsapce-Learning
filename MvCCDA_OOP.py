@@ -130,8 +130,9 @@ class MvCCDA():
                             + sum_Q
 
                         # the assemble of 'b' should be
-                        b = self.num_view * self.lambda2 * self.onehots[0][i, :] \
-                            + self.num_view * self.lambda3 * weighted_comp_i
+                        b1 = self.num_view * self.lambda2 * self.onehots[0][i, :].reshape(1,-1)
+                        b2 = self.num_view * self.lambda3 * weighted_comp_i
+                        b = b1 + b2
                         for v in range(self.num_view):
                             b = b + Q[v] * np.dot(map_matrices[v], data[v][i, :])
                         updated_common_comp_i = np.linalg.inv(np.eye(self.subspace_dim) * a).dot(b.reshape(-1, 1))
@@ -166,7 +167,7 @@ class MvCCDA():
                     loss = np.dot(loss, loss.T)
                     loss = np.sqrt(loss)
                     # update
-                    common_comp[i, :] = updated_common_comp_i.T
+                    common_comp[i, :] = updated_common_comp_i.reshape(1,-1)
                     optimized_count += 1
                     if loss < 0.0001:
                         coveraged = True
@@ -392,8 +393,7 @@ if __name__ == "__main__":
     te_MvData, te_label = mnist_usps_mat.get('Te_data'), mnist_usps_mat.get('Te_Labels')
     tr_MvData, tr_label = pca_loader.cell2list(tr_MvData), pca_loader.cell2list(tr_label)
     te_MvData, te_label = pca_loader.cell2list(te_MvData), pca_loader.cell2list(te_label)
-    tr_MvData = pca_loader.load_pca(tr_MvData, pca_dim)
-    te_MvData = pca_loader.load_pca(te_MvData, pca_dim)
+    tr_MvData,te_MvData  = pca_loader.load_pca(tr_MvData, te_MvData, pca_dim)
 
     param = io.loadmat("E:\\Works\\MatlabWork\\MvCCDA_mnist_usps\\param.mat")
     common_comp = param.get('Z').T
@@ -407,7 +407,7 @@ if __name__ == "__main__":
 
     model = MvCCDA(algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-3, lambda4=0)
     # train_labels = labels.get("train")
-    map_matrices, common_comp = model.train(tr_MvData, tr_label, rand_seed=0)
+    map_matrices, common_comp = model.train(tr_MvData, tr_label, common_comp, map_matrices, rand_seed=0)
 
     # project test data to subspace
     mapped_ave_acc = model.test(te_MvData, te_label, map_matrices, mode ="pair_wise")

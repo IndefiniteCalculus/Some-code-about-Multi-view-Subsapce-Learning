@@ -1,14 +1,17 @@
 function preprocess()
     DATA = load("E:\\Works\\数据集\\temp.mat"); % 暂时引入mat文件，功能测试完毕后会导入temp.mat文件直接使用
-    data = DATA.data.';
-    data = double(data);
+    tr_data = DATA.tr_data.';
+    te_data = DATA.te_data.';
+    tr_data = double(tr_data);
+    te_data = double(te_data);
     num_view = DATA.num_view;
     dims_list = DATA.dim_list;
     pca_dim = DATA.pca_dim;
-    swap_dir = ".";
-    % split data into multiview data
-    MvData = cell(1,num_view);
-    shape = size(data);
+    
+    % split tr_data into multiview tr_data
+    tr_MvData = cell(1,num_view);
+    te_MvData = cell(1,num_view);
+    shape = size(tr_data);
     for i = 1:num_view
         if(i-1 < 1)
             start_dim = 1;
@@ -17,12 +20,13 @@ function preprocess()
             start_dim = sum(dims_list(1:i-1)) + 1;
             end_dim = sum(dims_list(1:i));
         end
-        range = [start_dim, end_dim];
-        MvData{i} = data(start_dim : end_dim, : );
+        tr_MvData{i} = tr_data(start_dim : end_dim, : );
+        te_MvData{i} = te_data(start_dim : end_dim, : );
     end
     %DATA = load([swap_dir,'temp.mat']);
-    %data = DATA.data;
+    %tr_data = DATA.tr_data;
     
-    [x_mean x_var eig_value W_pca] = MvPCA(MvData);
-    MvData = MvPCA_Projection(MvData, x_mean, x_var, W_pca, pca_dim);    
-    save('E:\\Works\\数据集\\temp.mat', 'MvData');
+    [x_mean x_var eig_value W_pca] = MvPCA(tr_MvData);
+    tr_MvData = MvPCA_Projection(tr_MvData, x_mean, x_var, W_pca, pca_dim);    
+    te_MvData = MvPCA_Projection(te_MvData, x_mean, x_var, W_pca, pca_dim);
+    save('E:\\Works\\数据集\\temp.mat', 'tr_MvData', 'te_MvData');
