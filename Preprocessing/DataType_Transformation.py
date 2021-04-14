@@ -2,9 +2,7 @@ import numpy as np
 import scipy.io as io
 import matlab.engine
 from Data import dataloader
-# TODO: complete data transform task, the module aim to save data to mat, start matlab engine load in data and run matlab file to reduce the dim of data
-# TODO: save data to mat
-def save_pydata2mat(train_data:list, test_data, swap_dir, pca_dim):
+def save_pydata2mat(train_data:list, test_data:list, swap_dir, pca_dim):
     count = 0
     data_dict = {}
     tr_mat, te_mat = None, None

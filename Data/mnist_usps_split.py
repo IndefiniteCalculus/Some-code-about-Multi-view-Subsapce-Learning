@@ -50,6 +50,5 @@ def do_split(MvData, labels):
         tr_labels.append(np.array(tr_label).reshape(1,-1))
         va_labels.append(np.array(va_label).reshape(1,-1))
         te_labels.append(np.array(te_label).reshape(1,-1))
-        # TODO processing Labels to fit with split data
 
     return tr_MvData, va_MvData, te_MvData, tr_labels, va_labels, te_labels

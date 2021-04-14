@@ -42,10 +42,13 @@ def load_data(data_name, pca_dim = None):
 
     elif data_name == "pca_mnist-usps":
         Mv_Data, labels = transform_mnist_usps.do_transform("E:\\Works\\数据集\\mnist-usps")
-        MvPCA = pca.load_pca(Mv_Data, pca_dim)
         from Data import mnist_usps_split
-        tr_MvPCA, va_MvPCA, te_MvPCA, tr_labels, va_labels, te_labels\
-            = mnist_usps_split.do_split(MvPCA, labels)
+        tr_MvData, va_MvData, te_MvData, tr_labels, va_labels, te_labels \
+            = mnist_usps_split.do_split(Mv_Data, labels)
+        tr_MvPCA, te_MvPCA = pca.load_pca(tr_MvData, te_MvData, pca_dim)
+        _, va_MvPCA = pca.load_pca(tr_MvData, va_MvData, pca_dim)
+
+
         return tr_MvPCA, va_MvPCA, te_MvPCA, tr_labels, va_labels, te_labels
 
     elif data_name == "mnist-usps":
