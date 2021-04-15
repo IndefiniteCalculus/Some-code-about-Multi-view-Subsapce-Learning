@@ -262,7 +262,7 @@ class MvCCDA():
             pass
         return map_matrices, common_comp
 
-    def test(self, test_data, labels, map_matrices, mode):
+    def test(self, test_data, labels, map_matrices, mode, K_Near):
         # testing method aim to find each mapped data vectors nearest vector (use Eucilid distance). If the nearest
         # vector and selected vector shared with same label, the selected vector was mapped to a proper manifold.
         # TODO: design a independent cross-validation method(or refactor train, isolate the part related to num_class
@@ -396,10 +396,13 @@ if __name__ == "__main__":
     # te_MvData, te_label = pca_loader.cell2list(te_MvData), pca_loader.cell2list(te_label)
     # tr_MvData,te_MvData  = pca_loader.load_pca(tr_MvData, te_MvData, pca_dim)
     print("data load in, start training")
-    param = io.loadmat("E:\\Works\\MatlabWork\\MvCCDA_mnist_usps\\param.mat")
+    # param = io.loadmat("E:\\Works\\MatlabWork\\MvCCDA_mnist_usps\\param.mat")
+    param = dataloader.load_param()
     common_comp = param.get('Z').T
     map_matrices = param.get('P')
-    map_matrices = pca_loader.cell2list(map_matrices)
+    for map_id in range(len(map_matrices)):
+        map_matrices[map_id] = map_matrices[map_id].T
+    # map_matrices = pca_loader.cell2list(map_matrices)
     # param = dataloader.load_param()
     # common_comp = param.get("Z").T
     # map_matrices = param.get("P")
@@ -417,9 +420,11 @@ if __name__ == "__main__":
     # pie                                                                           # time acc nmi
     # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-5 # 19s 72.3% 89.6%
     # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-4 # 19s 72.3% 89.6%
+    # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=5e-4 # 75s 79% 91%
     #
     # algorithm="LPDP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-5, lambda4=5e-5 # 20s 72.44% 89.6%
     # algorithm="LPDP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-5 # 20s 72.44% 89.6%
+    # algorithm="LPDP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=5e-6, lambda4=5e-5 # 87s 79% 91%
     #
     # algorithm="MMC", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-3 # 60s 77.99% 91.4%
     # algorithm="MMMC", t = 0.1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-3 # 41s 75.33% 90.5%
@@ -427,24 +432,33 @@ if __name__ == "__main__":
     # algorithm="MMMC", t = 1.5, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-3 # 75s 78.75% 91.5%
     # algorithm="MMMC", t = 2, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-3 # 87s 79.34% 91.8%
     #
+    # algorithm="LPP", t = 1 ,sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=0, lambda4=0 # 75s 79% 91%
     # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0 # 20s 72.34% 89.6%
     # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.06, lambda2=0.02, lambda3=0 # 22s 49.56% 80.93%
     #
     import time
     model = MvCCDA(
-        algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0 # 22s 49.56%
+        algorithm="LPDP", t = 0, sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=5e-5, lambda4=5e-4 # 87s 79% 91%
     )
 
     t1 = time.time()
-    map_matrices, common_comp = model.train(tr_MvData, tr_label, rand_seed=None)
+    map_matrices, common_comp = model.train(tr_MvData, tr_label, rand_seed=None,
+                                            # common_comp=common_comp, map_matrices=map_matrices
+                                            )
     t2 = time.time()
     t = t2 - t1
     print("training done")
 
+    ave_acc, ave_nmi = model.test(te_MvData, te_label, map_matrices, mode="pair_wise", K_Near=1)
+    print("time: " + str(t))
+    print("ave_acc: " + str(ave_acc) + " ave_nmi: " + str(ave_nmi))
+
     # project test data to subspace
-    ave_acc, ave_nmi = model.test(te_MvData, te_label, map_matrices, mode ="pair_wise")
-    print("time: "+str(t))
-    print("ave_acc: "+str(ave_acc) + " ave_nmi: " + str(ave_nmi))
+    # for i in range(1,9,2):
+    #     ave_acc, ave_nmi = model.test(te_MvData, te_label, map_matrices, mode ="pair_wise", K_Near=i)
+    #     print(i)
+    #     print("time: "+str(t))
+    #     print("ave_acc: "+str(ave_acc) + " ave_nmi: " + str(ave_nmi))
     #
     # print("percentage of how many vector and it's nearest vector shared with same label among unmapped dataset: \n"+str(unmapped_ave_acc)+"%")
     # print("percentage of how many vector and it's nearest vector shared with same label among mapped dataset: \n" + str(mapped_ave_acc)+"%")
