@@ -27,7 +27,8 @@ class MvCCDA():
 
     def train(self, train_data, train_labels,
               common_comp: np.array = None, map_matrices: list = None, rand_seed=None,
-              training_mode:str = "normal", valid_rate = 1, using_view = "all"):
+              training_mode:str = "normal", valid_rate = 1, using_view = "all",
+              z_loss = 1e-4, z_count = 200, p_loss = 1e-4, p_count = 200, total_loss = 5e-7, total_count = 200):
 
         # initial parameters about input data
         self.num_sample = self._obtain_numsample(train_data[0])
@@ -75,7 +76,8 @@ class MvCCDA():
 
         # normally update common component and map matrices
         if training_mode == "normal":
-            return self._optimization(train_data, common_comp, map_matrices)
+            return self._optimization(train_data, common_comp, map_matrices,
+                                      z_loss, z_count, p_loss, p_count, total_loss, total_count)
         if training_mode == "cross_validation":
             # split samples into 10 separated parts
             each_n_sample = self.num_sample // 10
@@ -100,7 +102,8 @@ class MvCCDA():
 
 
 
-    def _optimization(self, data, common_comp, map_matrices):
+    def _optimization(self, data, common_comp, map_matrices,
+                      z_loss = 1e-4, z_count = 200, p_loss = 1e-4, p_count = 200, total_loss = 5e-7, total_count = 200):
         # iterative update reduced_data and map_matrix
         all_coveraged = None
         iteration = 0
@@ -175,10 +178,10 @@ class MvCCDA():
                     # update
                     common_comp[i, :] = updated_common_comp_i.reshape(1,-1)
                     optimized_count += 1
-                    if loss < 0.0001:
+                    if loss < z_loss:
                         coveraged = True
                         break
-                    if optimized_count > 200:
+                    if optimized_count > z_count:
                         coveraged = False
                         break
 
@@ -236,10 +239,10 @@ class MvCCDA():
                     # update for next loop
                     map_mat_v = updated_map_mat_v
 
-                    if loss < 1e-4:
+                    if loss < p_loss:
                         coveraged = True
                         break
-                    if optimized_count > 200:
+                    if optimized_count > p_count:
                         coveraged = False
                         break
                     pass
@@ -253,10 +256,10 @@ class MvCCDA():
                 loss = loss * loss
                 loss = np.sqrt(np.sum(loss))
                 max_loss = max(loss, max_loss)
-            if max_loss < 5e-7:
+            if max_loss < total_loss:#5e-7:
                 all_coveraged = True
                 break
-            if iteration > 200:
+            if iteration > total_count:
                 all_coveraged = False
                 break
             pass
@@ -278,13 +281,14 @@ class MvCCDA():
         for vi in range(num_view):
             mapped_vi = np.dot(test_data[vi], map_matrices[vi].T)
             mapped_data.append(mapped_vi)
+            labels[vi] = np.ravel(labels[vi])
 
         # count the accuracy of data in the manifold
         acc_list = []
         NMI_list = []
         for vi in range(num_view):
             neigh = KNeighborsClassifier(n_neighbors=K_Near)
-            _ =neigh.fit(mapped_data[vi], labels[vi].reshape(-1, 1))
+            _ =neigh.fit(mapped_data[vi], labels[vi])
             for vj in range(num_view):
                 if mode == "pair_wise":
                     if vi != vj:
@@ -303,7 +307,11 @@ class MvCCDA():
 
         acc_ave = sum(acc_list) / len(acc_list) * 100
         NMI_ave = sum(NMI_list) / len(NMI_list) * 100
-        return acc_ave, NMI_ave
+        D_acc = []
+        for acc in acc_list:
+            D_acc.append((acc-acc_ave)**2)
+        D_acc_ave = sum(D_acc) / len(D_acc)
+        return acc_ave, NMI_ave, D_acc_ave
 
     def _get_hotkernel_mat(self, label, train_data):
         # obtain similarity matrix on multi_view
@@ -414,51 +422,54 @@ if __name__ == "__main__":
     #
     # mnist-usps tr 50 te 25
     # algorithm="LPDP", t = 1, sigma = 200, lambda1=0.06, lambda2=0.2, lambda3=5e-5, lambda4=5e-5 # 6s 81.8%
-    # algorithm="LPP", sigma = 200, lambda1=0.06, lambda2=0.2, lambda3=5e-3 # 5s 81.6%
-    # algorithm="LPDP", t = 1, sigma = 200, lambda1=0.6, lambda2=0.2, lambda3=0, lambda4=5e-4 #7-8s 82.2%
+    # algorithm="LPP", sigma = 200, lambda1=0.6, lambda2=0.02, lambda3=5e-2 # /k=1 5s 82.0% 6590 73% / k=5 21s 81.2% 6462 73% / k=7 21s 81.4% 6494 73%
+    # algorithm="LPDP", t = 1, sigma = 200, lambda1=0.6, lambda2=0.2, lambda3=0, lambda4=5e-4 # / k=1 7-8s 82.2% 6622 74% / k=3 7s 82.2% 6622 74.8% / k=5 7s 82.6% 6686 75% / k=7 7s 83.8% 6882 76.4%
+    # algorithm="MMMC", t = 1, sigma = 200, lambda1=0.06, lambda2=0.2, lambda3=0, lambda4=5e-4 # / k=1 8s 82% 6590 72% / k=3 7s 82.6% 6687 73% / k=5 8s 83.8% 6883 75% / k=7 84.4% 6981 75%
     #
+    #
+
     # pie                                                                           # time acc nmi
     # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-5 # 19s 72.3% 89.6%
     # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-4 # 19s 72.3% 89.6%
-    # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=5e-4 # 75s 79% 91%
+    # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=5e-4 # /k=1 70s 79%  91% /k=3 77%  90% /k=5 70s 76%  89% /k=7 69s 73.9%  88%
     #
     # algorithm="LPDP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-5, lambda4=5e-5 # 20s 72.44% 89.6%
     # algorithm="LPDP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-5 # 20s 72.44% 89.6%
     # algorithm="LPDP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=5e-6, lambda4=5e-5 # 87s 79% 91%
+    # algorithm="LPDP", t = 2, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-3, lambda4=5e-3 # /k=1 85s 79.4% 92% /k=3 78.42% /k=5 76.57% /k=7 75%
     #
+
     # algorithm="MMC", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-3 # 60s 77.99% 91.4%
     # algorithm="MMMC", t = 0.1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-3 # 41s 75.33% 90.5%
     # algorithm="MMMC", t = 0.01, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-3 # 40s 74.67% 90.4%
     # algorithm="MMMC", t = 1.5, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-3 # 75s 78.75% 91.5%
-    # algorithm="MMMC", t = 2, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-3 # 87s 79.34% 91.8%
+    # algorithm="MMMC", t = 2, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-3 # /k=1 87s 79.29% 91.8% /k=3 78.09% /k=5 76.35% /k=7 74%
     #
-    # algorithm="LPP", t = 1 ,sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=0, lambda4=0 # 75s 79% 91%
+    # algorithm="LPP", t = 1 ,sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=0, lambda4=0 # /k=1 75s 79% 91%/k=3 77.88 /k=5 76.03% /k=7 73%
     # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0 # 20s 72.34% 89.6%
     # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.06, lambda2=0.02, lambda3=0 # 22s 49.56% 80.93%
     #
     import time
     model = MvCCDA(
-        algorithm="LPDP", t = 0, sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=5e-5, lambda4=5e-4 # 87s 79% 91%
+        algorithm="LPP", t = 1 ,sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=0, lambda4=0 # 75s 79% 91%
     )
 
     t1 = time.time()
-    map_matrices, common_comp = model.train(tr_MvData, tr_label, rand_seed=None,
-                                            # common_comp=common_comp, map_matrices=map_matrices
-                                            )
+    map_matrices, common_comp = model.train(tr_MvData, tr_label, rand_seed=0,)
     t2 = time.time()
     t = t2 - t1
     print("training done")
 
-    ave_acc, ave_nmi = model.test(te_MvData, te_label, map_matrices, mode="pair_wise", K_Near=1)
-    print("time: " + str(t))
-    print("ave_acc: " + str(ave_acc) + " ave_nmi: " + str(ave_nmi))
+    # ave_acc, ave_nmi, ave_D_acc = model.test(te_MvData, te_label, map_matrices, mode="pair_wise", K_Near=1)
+    # print("t: " + str(model.t) + ", l1: " +str(model.lambda1) +", l2: "+str(model.lambda2)+", l3: "+str(model.lambda3)+", l4: "+str(model.lambda4))
+    # print("ave_acc: " + str(ave_acc) + " ave_nmi: " + str(ave_nmi))
+    # print("time: " + str(t))
 
-    # project test data to subspace
-    # for i in range(1,9,2):
-    #     ave_acc, ave_nmi = model.test(te_MvData, te_label, map_matrices, mode ="pair_wise", K_Near=i)
-    #     print(i)
-    #     print("time: "+str(t))
-    #     print("ave_acc: "+str(ave_acc) + " ave_nmi: " + str(ave_nmi))
+    for i in range(1,9,2):
+        ave_acc, ave_nmi, ave_D_acc = model.test(te_MvData, te_label, map_matrices, mode ="pair_wise", K_Near=i)
+        print(i)
+        print("time: "+str(t))
+        print("ave_acc: "+str(ave_acc) + " ave_nmi: " + str(ave_nmi))
     #
     # print("percentage of how many vector and it's nearest vector shared with same label among unmapped dataset: \n"+str(unmapped_ave_acc)+"%")
     # print("percentage of how many vector and it's nearest vector shared with same label among mapped dataset: \n" + str(mapped_ave_acc)+"%")

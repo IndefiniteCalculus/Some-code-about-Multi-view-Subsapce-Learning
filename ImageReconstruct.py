@@ -41,7 +41,7 @@ def save_sample_file(tr_MvList, tr_labels, te_MvList, te_labels):
             path = root_dir2 + "/" + str(v) + "/" + str(te_label[l_idx]) + ".png"
             cv.imencode('.png', im)[1].tofile(path)
 
-def reconstruct(MvData):
+def reconstruct(MvData,labels):
     # reconstruct data vector to data mat
     MvImage = []
     num_sample = MvData[0].shape[0]
@@ -54,8 +54,8 @@ def reconstruct(MvData):
             im = im.reshape((w_h, w_h))
             im = cv.rotate(im,cv.ROTATE_90_CLOCKWISE)
             im = cv.flip(im, 1)
-            # cv.imshow("display", im)
-            # cv.waitKey(800)
+            cv.imshow("display"+str(v)+" "+str(labels[v][0,idx]), im)
+            cv.waitKey(800)
             images_in_view.append(im)
         MvImage.append(images_in_view)
     return MvImage
@@ -67,8 +67,8 @@ if __name__ == '__main__':
     tr_labels = labels.get('train')
     te_labels = labels.get('test')
     print("reconstructing data")
-    tr_Mvlist = reconstruct(tr_MvData)
-    te_Mvlist = reconstruct(te_MvData)
+    tr_Mvlist = reconstruct(tr_MvData,tr_labels)
+    te_Mvlist = reconstruct(te_MvData,te_labels)
     print("saving data")
     save_view_file(tr_Mvlist, tr_labels, te_Mvlist, te_labels)
     # save_sample_file(tr_Mvlist, tr_labels, te_Mvlist, te_labels)
