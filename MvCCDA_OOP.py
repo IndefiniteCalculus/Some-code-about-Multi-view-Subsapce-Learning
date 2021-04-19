@@ -263,7 +263,17 @@ class MvCCDA():
                 all_coveraged = False
                 break
             pass
+        self.map_matrices = map_matrices
         return map_matrices, common_comp
+
+    def projection(self, test_data):
+        num_view = self._obtain_numview(test_data)
+        mapped_data = []
+        for vi in range(num_view):
+            mapped_vi = np.dot(test_data[vi], map_matrices[vi].T)
+            mapped_data.append(mapped_vi)
+            labels[vi] = np.ravel(labels[vi])
+        return test_data
 
     def test(self, test_data, labels, map_matrices, mode, K_Near):
         # testing method aim to find each mapped data vectors nearest vector (use Eucilid distance). If the nearest
@@ -382,12 +392,13 @@ class MvCCDA():
 K_Near = 1
 
 if __name__ == "__main__":
-    tr_MvData, te_MvData, labels = dataloader.load_data("matlabpca")
-    tr_label = labels.get("train")
-    te_label = labels.get("test")
+    # tr_MvData, te_MvData, labels = dataloader.load_data("matlabpca")
+    # tr_label = labels.get("train")
+    # te_label = labels.get("test")
     pca_dim = 80
     # tr_MvData, va_MvData, te_MvData, tr_label, va_label, te_label = dataloader.load_data("pca_mnist-usps", pca_dim)
 
+    tr_MvData, tr_label, te_MvData, te_label, va_MvData, va_label = dataloader.load_data("pca_COIL", pca_dim)
     # the pca procedures of matlab is using mean removed data do the pca transformation, and the fit of W from each view
     # is used to construct an only W_mean do the data dim reduction
     # TODO: try implement multiview pca on python when has free time
@@ -432,7 +443,8 @@ if __name__ == "__main__":
     # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-5 # 19s 72.3% 89.6%
     # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-4 # 19s 72.3% 89.6%
     # algorithm="LPP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=5e-4 # /k=1 70s 79%  91% /k=3 77%  90% /k=5 70s 76%  89% /k=7 69s 73.9%  88%
-    #
+    # algorithm="LPP", t = 1 ,sigma = 2000, lambda1=0.6, lambda2=0, lambda3=2e-0, lambda4=0 # 120s 71% 88%
+
     # algorithm="LPDP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-5, lambda4=5e-5 # 20s 72.44% 89.6%
     # algorithm="LPDP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=0, lambda4=5e-5 # 20s 72.44% 89.6%
     # algorithm="LPDP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=5e-6, lambda4=5e-5 # 87s 79% 91%
@@ -451,7 +463,7 @@ if __name__ == "__main__":
     #
     import time
     model = MvCCDA(
-        algorithm="LPP", t = 1 ,sigma = 2000, lambda1=0.6, lambda2=0.002, lambda3=0, lambda4=0 # 75s 79% 91%
+        algorithm="LPDP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-3, lambda4=5e-3
     )
 
     t1 = time.time()
@@ -460,17 +472,18 @@ if __name__ == "__main__":
     t = t2 - t1
     print("training done")
 
-    # ave_acc, ave_nmi, ave_D_acc = model.test(te_MvData, te_label, map_matrices, mode="pair_wise", K_Near=1)
-    # print("t: " + str(model.t) + ", l1: " +str(model.lambda1) +", l2: "+str(model.lambda2)+", l3: "+str(model.lambda3)+", l4: "+str(model.lambda4))
-    # print("ave_acc: " + str(ave_acc) + " ave_nmi: " + str(ave_nmi))
-    # print("time: " + str(t))
+    ave_acc, ave_nmi, ave_D_acc = model.test(te_MvData, te_label, map_matrices, mode="pair_wise", K_Near=1)
+    print("algorithm:" + str(model.algorithm) +" t: " + str(model.t) + ", l1: " +str(model.lambda1) +", l2: "+str(model.lambda2)+", l3: "+str(model.lambda3)+", l4: "+str(model.lambda4))
+    print("ave_acc: " + str(ave_acc) + " ave_nmi: " + str(ave_nmi))
+    print("time: " + str(t))
 
-    for i in range(1,9,2):
+    for i in range(1,4,1):
         ave_acc, ave_nmi, ave_D_acc = model.test(te_MvData, te_label, map_matrices, mode ="pair_wise", K_Near=i)
         print(i)
         print("time: "+str(t))
         print("ave_acc: "+str(ave_acc) + " ave_nmi: " + str(ave_nmi))
-    #
+    import winsound
+    winsound.Beep(600,1000)
     # print("percentage of how many vector and it's nearest vector shared with same label among unmapped dataset: \n"+str(unmapped_ave_acc)+"%")
     # print("percentage of how many vector and it's nearest vector shared with same label among mapped dataset: \n" + str(mapped_ave_acc)+"%")
     pass

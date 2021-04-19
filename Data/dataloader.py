@@ -47,8 +47,6 @@ def load_data(data_name, pca_dim = None):
             = mnist_usps_split.do_split(Mv_Data, labels)
         tr_MvPCA, te_MvPCA = pca.load_pca(tr_MvData, te_MvData, pca_dim)
         _, va_MvPCA = pca.load_pca(tr_MvData, va_MvData, pca_dim)
-
-
         return tr_MvPCA, va_MvPCA, te_MvPCA, tr_labels, va_labels, te_labels
 
     elif data_name == "mnist-usps":
@@ -64,6 +62,21 @@ def load_data(data_name, pca_dim = None):
         tr_MvData, va_MvData, te_MvData, tr_labels, va_labels, te_labels \
             = mnist_usps_split.do_split(MvData, labels)
         return tr_MvData, va_MvData, te_MvData, tr_labels, va_labels, te_labels
+
+    elif data_name == "COIL":
+        from Data import transform_COIL100
+        Mv_Data, labels = transform_COIL100.do_transform("E:\\Works\\数据集\\COIL\\coil-100")
+        tr_MvData, tr_MvLabel, te_MvData, te_MvLabel, va_MvData, va_MvLabel = transform_COIL100.split(Mv_Data, labels)
+        return tr_MvData, tr_MvLabel, te_MvData, te_MvLabel, va_MvData, va_MvLabel
+
+    elif data_name == "pca_COIL":
+        from Data import transform_COIL100
+        Mv_Data, labels = transform_COIL100.do_transform("E:\\Works\\数据集\\COIL\\coil-100")
+        tr_MvData, tr_MvLabel, te_MvData, te_MvLabel, va_MvData, va_MvLabel = transform_COIL100.split(Mv_Data, labels)
+        tr_MvPCA, te_MvPCA = pca.load_pca(tr_MvData, te_MvData, pca_dim)
+        if va_MvData is not None:
+            _, va_MvPCA = pca.load_pca(tr_MvData, va_MvData, pca_dim)
+        return tr_MvPCA, tr_MvLabel,te_MvPCA, te_MvLabel, va_MvData, va_MvLabel
 
     else:
         return None, None, None
