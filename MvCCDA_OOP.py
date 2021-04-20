@@ -1,7 +1,7 @@
 import numpy as np
 from Data import dataloader
 import scipy.io as io
-from Preprocessing import DataType_Transformation as pca_loader
+from Preprocessing import MvPCA_matlab as pca_loader
 import rcca
 
 class MvCCDA():
@@ -272,10 +272,9 @@ class MvCCDA():
         for vi in range(num_view):
             mapped_vi = np.dot(test_data[vi], map_matrices[vi].T)
             mapped_data.append(mapped_vi)
-            labels[vi] = np.ravel(labels[vi])
         return test_data
 
-    def test(self, test_data, labels, map_matrices, mode, K_Near):
+    def test(self, test_data, labels, map_matrices, mode="project and test", K_Near=1):
         # testing method aim to find each mapped data vectors nearest vector (use Eucilid distance). If the nearest
         # vector and selected vector shared with same label, the selected vector was mapped to a proper manifold.
         # TODO: design a independent cross-validation method(or refactor train, isolate the part related to num_class
@@ -287,12 +286,16 @@ class MvCCDA():
         from sklearn.metrics.cluster import normalized_mutual_info_score
         num_view = self._obtain_numview(test_data)
         num_sample = test_data[0].shape[0]
-        mapped_data = []
-        for vi in range(num_view):
-            mapped_vi = np.dot(test_data[vi], map_matrices[vi].T)
-            mapped_data.append(mapped_vi)
-            labels[vi] = np.ravel(labels[vi])
-
+        if mode == "project and test":
+            mapped_data = []
+            for vi in range(num_view):
+                mapped_vi = np.dot(test_data[vi], map_matrices[vi].T)
+                mapped_data.append(mapped_vi)
+                labels[vi] = np.ravel(labels[vi])
+        else:
+            mapped_data = test_data
+            for vi in range(num_view):
+                labels[vi] = np.ravel(labels[vi])
         # count the accuracy of data in the manifold
         acc_list = []
         NMI_list = []
@@ -300,7 +303,6 @@ class MvCCDA():
             neigh = KNeighborsClassifier(n_neighbors=K_Near)
             _ =neigh.fit(mapped_data[vi], labels[vi])
             for vj in range(num_view):
-                if mode == "pair_wise":
                     if vi != vj:
                         pred = neigh.predict(mapped_data[vj])
                         label = labels[vj]
@@ -392,7 +394,7 @@ class MvCCDA():
 K_Near = 1
 
 if __name__ == "__main__":
-    # tr_MvData, te_MvData, labels = dataloader.load_data("matlabpca")
+    # tr_MvData, te_MvData, labels = dataloader.load_data("pca_pie")
     # tr_label = labels.get("train")
     # te_label = labels.get("test")
     pca_dim = 80
@@ -463,7 +465,7 @@ if __name__ == "__main__":
     #
     import time
     model = MvCCDA(
-        algorithm="LPDP", t = 1, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-3, lambda4=5e-3
+        algorithm="LPDP", t = 2, sigma = 2000, lambda1=0.6, lambda2=0.02, lambda3=5e-3, lambda4=5e-3
     )
 
     t1 = time.time()

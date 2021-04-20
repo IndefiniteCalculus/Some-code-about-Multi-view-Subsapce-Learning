@@ -2,7 +2,7 @@ import pickle
 import os
 from Data import transform_ORL
 from Data import transform_mnist_usps
-from Preprocessing import DataType_Transformation as pca
+from Preprocessing import MvPCA_matlab as pca
 def load_data(data_name, pca_dim = None):
 
     if data_name == "matlabtest":
@@ -19,7 +19,7 @@ def load_data(data_name, pca_dim = None):
             test_set = row_data.get("test")
             label_set = pickle.load(label_f)
 
-    elif data_name == "matlabpca":
+    elif data_name == "pca_pie":
         root_dir = os.getcwd() + "\\Data"
         with open(root_dir + "\\dim_reduced_data.pickle", 'rb') as dim_reduced_f, open(root_dir+"\\labels.pickle","rb") as label_f:
             dim_reduced_f = pickle.load(dim_reduced_f)
@@ -55,6 +55,17 @@ def load_data(data_name, pca_dim = None):
         tr_MvData, va_MvData, te_MvData, tr_labels, va_labels, te_labels \
             = mnist_usps_split.do_split(MvData, labels)
         return tr_MvData, va_MvData, te_MvData, tr_labels, va_labels, te_labels
+
+    elif data_name == "mnist-usps_tr70_te30":
+        # mnist_usps tr te split
+        import scipy.io as io
+        mnist_usps_mat = io.loadmat("E:\\Works\\数据集\\mnist-usps\\mnist_usps.mat")
+        tr_MvData, tr_label = mnist_usps_mat.get('Tr_data'), mnist_usps_mat.get('Tr_Labels')
+        te_MvData, te_label = mnist_usps_mat.get('Te_data'), mnist_usps_mat.get('Te_Labels')
+        tr_MvData, tr_label = pca.cell2list(tr_MvData), pca.cell2list(tr_label)
+        te_MvData, te_label = pca.cell2list(te_MvData), pca.cell2list(te_label)
+        tr_MvData,te_MvData  = pca.load_pca(tr_MvData, te_MvData, pca_dim)
+        return tr_MvData, tr_label, te_MvData, te_label
 
     elif data_name == "resized_mnist-usps":
         MvData, labels = transform_mnist_usps.do_transform("E:\\Works\\数据集\\mnist-usps", loadin_mode="resize")
