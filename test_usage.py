@@ -46,7 +46,8 @@ def do_train(dataset_name, algorithm):
         pass
     elif algorithm == "CCA":
         import rcca
-        CCA = rcca.CCA(kernelcca = False, reg = 0., numCC = 10)
+        num_class = len(set(np.ravel(tr_label[0]).tolist()))
+        CCA = rcca.CCA(kernelcca = False, reg = 0., numCC = num_class)
 
     # training to find map_matrice based on different algorithm
     if is_MvCCDA:
@@ -136,8 +137,6 @@ def knn_test(model, map_matrices, te_MvData, te_label,t,algorithm,K_range=(1,5,1
         print("time: " + str(t))
 
     if algorithm == "CCA":
-        import rcca
-        # te_MvCCA,_ = rcca.predict(te_MvData, map_matrices)
 
         for i in range(K_range[0], K_range[1], K_range[2]):
             ave_acc, ave_nmi, D_acc = test(te_MvData, te_label, map_matrices, K_Near=i,mode=mode)
