@@ -274,56 +274,56 @@ class MvCCDA():
             mapped_data.append(mapped_vi)
         return test_data
 
-    def test(self, test_data, labels, map_matrices, mode="project and test", K_Near=1):
-        # testing method aim to find each mapped data vectors nearest vector (use Eucilid distance). If the nearest
-        # vector and selected vector shared with same label, the selected vector was mapped to a proper manifold.
-        # TODO: design a independent cross-validation method(or refactor train, isolate the part related to num_class
-        #  values, and optimized part as a independent method). The frame work need to be implement is：
-        #  1: random split 2:k-fold
-
-        # map data to manifold described by mapping matrices
-        from sklearn.neighbors import KNeighborsClassifier
-        from sklearn.metrics.cluster import normalized_mutual_info_score
-        num_view = self._obtain_numview(test_data)
-        num_sample = test_data[0].shape[0]
-        if mode == "project and test":
-            mapped_data = []
-            for vi in range(num_view):
-                mapped_vi = np.dot(test_data[vi], map_matrices[vi].T)
-                mapped_data.append(mapped_vi)
-                labels[vi] = np.ravel(labels[vi])
-        else:
-            mapped_data = test_data
-            for vi in range(num_view):
-                labels[vi] = np.ravel(labels[vi])
-        # count the accuracy of data in the manifold
-        acc_list = []
-        NMI_list = []
-        for vi in range(num_view):
-            neigh = KNeighborsClassifier(n_neighbors=K_Near)
-            _ =neigh.fit(mapped_data[vi], labels[vi])
-            for vj in range(num_view):
-                    if vi != vj:
-                        pred = neigh.predict(mapped_data[vj])
-                        label = labels[vj]
-                        label = np.ravel(label)
-                        t = pred - label
-                        count = 0
-                        for ele_idx in range(max(t.shape)):
-                            if t[ele_idx] == 0:
-                                count += 1
-                        acc = count / num_sample
-                        acc_list.append(acc)
-                        NMI_score = normalized_mutual_info_score(pred, label)
-                        NMI_list.append(NMI_score)
-
-        acc_ave = sum(acc_list) / len(acc_list) * 100
-        NMI_ave = sum(NMI_list) / len(NMI_list) * 100
-        D_acc = []
-        for acc in acc_list:
-            D_acc.append((acc-acc_ave)**2)
-        D_acc_ave = sum(D_acc) / len(D_acc)
-        return acc_ave, NMI_ave, D_acc_ave
+    # def test(self, test_data, labels, map_matrices, mode="project and test", K_Near=1):
+    #     # testing method aim to find each mapped data vectors nearest vector (use Eucilid distance). If the nearest
+    #     # vector and selected vector shared with same label, the selected vector was mapped to a proper manifold.
+    #     # TODO: design a independent cross-validation method(or refactor train, isolate the part related to num_class
+    #     #  values, and optimized part as a independent method). The frame work need to be implement is：
+    #     #  1: random split 2:k-fold
+    #
+    #     # map data to manifold described by mapping matrices
+    #     from sklearn.neighbors import KNeighborsClassifier
+    #     from sklearn.metrics.cluster import normalized_mutual_info_score
+    #     num_view = self._obtain_numview(test_data)
+    #     num_sample = test_data[0].shape[0]
+    #     if mode == "project and test":
+    #         mapped_data = []
+    #         for vi in range(num_view):
+    #             mapped_vi = np.dot(test_data[vi], map_matrices[vi].T)
+    #             mapped_data.append(mapped_vi)
+    #             labels[vi] = np.ravel(labels[vi])
+    #     else:
+    #         mapped_data = test_data
+    #         for vi in range(num_view):
+    #             labels[vi] = np.ravel(labels[vi])
+    #     # count the accuracy of data in the manifold
+    #     acc_list = []
+    #     NMI_list = []
+    #     for vi in range(num_view):
+    #         neigh = KNeighborsClassifier(n_neighbors=K_Near)
+    #         _ =neigh.fit(mapped_data[vi], labels[vi])
+    #         for vj in range(num_view):
+    #                 if vi != vj:
+    #                     pred = neigh.predict(mapped_data[vj])
+    #                     label = labels[vj]
+    #                     label = np.ravel(label)
+    #                     t = pred - label
+    #                     count = 0
+    #                     for ele_idx in range(max(t.shape)):
+    #                         if t[ele_idx] == 0:
+    #                             count += 1
+    #                     acc = count / num_sample
+    #                     acc_list.append(acc)
+    #                     NMI_score = normalized_mutual_info_score(pred, label)
+    #                     NMI_list.append(NMI_score)
+    #
+    #     acc_ave = sum(acc_list) / len(acc_list) * 100
+    #     NMI_ave = sum(NMI_list) / len(NMI_list) * 100
+    #     D_acc = []
+    #     for acc in acc_list:
+    #         D_acc.append((acc-acc_ave/100)**2)
+    #     D_acc = sum(D_acc)**1/2 / len(D_acc) * 100
+    #     return acc_ave, NMI_ave, D_acc
 
     def _get_hotkernel_mat(self, label, train_data):
         # obtain similarity matrix on multi_view
