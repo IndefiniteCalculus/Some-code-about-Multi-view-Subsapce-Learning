@@ -6,7 +6,7 @@ python 3.7+
 
 package list: 
 
-numpy, sklearn, scipy, pickle, opencv-python
+numpy, sklearn, scipy, pickle, opencv-python, pyrcca
 
 need matlab2019a installed to add matlab engine package in python,  
 for more detail about how to install matlab engine, see https://www.mathworks.com/help/matlab/matlab_external/install-the-matlab-engine-for-python.html 
